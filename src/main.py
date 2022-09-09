@@ -314,14 +314,20 @@ if __name__ == "__main__":
                     dict_cols[i] = columns_float
                 else:
                     dict_cols[i] = [col + f" N+{i}" for col in columns_float if col != "Parking_all"]
-            
+            print(dict_cols)
             #convert floats
             for i, list_of_columns in dict_cols.items():
                 for col in list_of_columns:
                     df_report_EU.loc[:, col] = df_report_EU[col].astype("str").str.replace(',', '').astype("float64").fillna(0)
-                    if i != 0:
+                    
+                    if i == 0:
+                        pass
+                    elif i == 1:
+                        col_py = col.replace(f" N+{str(i)}", "")
+                        df_report_EU.loc[:, col] = df_report_EU[col].fillna(0) - df_report_EU[col_py].fillna(0)
+                    else:
                         #convert cumulative to single year figures
-                        col_py = col.replace(f"N+str({i})", f"N+str({i - 1})")
+                        col_py = col.replace(f"N+{str(i)}", f"N+{str(i - 1)}")
                         df_report_EU.loc[:, col] = df_report_EU[col].fillna(0) - df_report_EU[col_py].fillna(0)
             
             # without bonus amount
@@ -392,9 +398,16 @@ if __name__ == "__main__":
             for i, list_of_columns in dict_cols.items():
                 for col in list_of_columns:
                     df_report_BR.loc[:, col] = df_report_BR[col].astype("str").str.replace(',', '').astype("float64").fillna(0)
-                    if i != 0:
+                    if i == 0:
+                        pass
+                    elif i == 1:
+                        col_py = col.replace(f" N+{str(i)}", f"")
+                        df_report_BR.loc[:, col] = df_report_BR[col].fillna(0) - df_report_BR[col_py].fillna(0)
+                    else:
                         #convert cumulative to single year figures
-                        col_py = col.replace(f"N+str({i})", f"N+str({i - 1})")
+                        col_py = col.replace(f"N+{i}", f"N+{i - 1}")
+                        print(col)
+                        print(col_py)
                         df_report_BR.loc[:, col] = df_report_BR[col].fillna(0) - df_report_BR[col_py].fillna(0)
             
             # without bonus amount
