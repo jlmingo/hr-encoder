@@ -24,11 +24,11 @@ xml_request = f'''<?xml version='1.0' encoding='UTF-8'?>
 <call method='exportConfigurableModelData' callerName='LOI'>
     <credentials login='' password='' instanceCode=''/>
     <version name='' isDefault='false'/>
-    <job jobNumber='0' pageNumber='1' pageSize='10'/>
+    <job jobNumber='0' pageNumber='1' pageSize='20'/>
     <modeled-sheet name='' isGlobal='true'/>
     <filters>
         <levels>
-            <level name='EDPR' includeDescendants='true'/>
+            <level name='' includeDescendants='true'/>
         </levels>
         <timeSpan start='' end=''/>
     </filters>
@@ -38,7 +38,7 @@ xml_request = f'''<?xml version='1.0' encoding='UTF-8'?>
     </rules>
 </call>'''
 
-def Download_Adaptive(sheet):
+def Download_Adaptive(sheet, level):
     #parameters
     user=getenv("AdaptiveUser")
     password=getenv("AdaptivePassword")
@@ -62,7 +62,10 @@ def Download_Adaptive(sheet):
     print(version)
 
     #set sheet
-    root[3].set("name", sheet)    
+    root[3].set("name", sheet)
+
+    #set level
+    root[4][0][0].set("name", level)
     
     #set dates
     root[4][1].set("start", start_date)
@@ -113,7 +116,7 @@ def Download_Adaptive(sheet):
         list_df.append(df)
     
     df_final = pd.concat(list_df, ignore_index=True)
-    df_final.to_csv(f"{sheet}.csv", index=False)
+    df_final.to_csv(f"{sheet}_{level}.csv", index=False)
     return df_final
     
 def HR_getKey():
@@ -294,7 +297,13 @@ if __name__ == "__main__":
             source_path = getenv("Reports_Folder")
             
             #europe
-            df_report_EU = Download_Adaptive("Human Resources EU+CH+OF")
+            df_report_EU_CH = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-CH")
+            #df_report_EU_OF = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-OF")
+            #df_report_EU_NA = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-NA")
+            df_report_EU_IG = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-IG")
+            df_report_EU_EU_BR = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-EU+BR")
+
+            df_report_EU = pd.concat([df_report_EU_CH,df_report_EU_IG, df_report_EU_EU_BR]) #df_report_EU_OF, df_report_EU_NA,
 
             (df_report_EU['Periculosidade_BR'],
             df_report_EU['SeguroMed_seguromedico'],
@@ -367,7 +376,7 @@ if __name__ == "__main__":
 
             #Brazil 
                   
-            df_report_BR = Download_Adaptive("Human Resources Brazil")
+            df_report_BR = Download_Adaptive("Human Resources Brazil", "EDPR")
             
             (df_report_BR['PensionPlan Carga'],
             df_report_BR['PensionPlan Extra'],
@@ -449,7 +458,7 @@ if __name__ == "__main__":
             df_report_BR["CompanyCar Final"] = df_report_BR["CompanyCar"]
 
             
-            df_report_NA = Download_Adaptive("Human Resources NA")
+            df_report_NA = Download_Adaptive("Human Resources NA", "EDPR")
             
             df_report_NA.rename(columns={'NH Situation' : 'Situacion','Direction' : 'Dirección','Department' : 'Departamento'}, inplace=True)
         
@@ -475,19 +484,25 @@ if __name__ == "__main__":
             print("----------------------------------")
             sourcePath = getenv("Reports_Folder")
             
-            df_report_EU = Download_Adaptive("Human Resources EU+CH+OF")
+            df_report_EU_CH = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-CH")
+            #df_report_EU_OF = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-OF")
+            #df_report_EU_NA = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-NA")
+            df_report_EU_IG = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-IG")
+            df_report_EU_EU_BR = Download_Adaptive("Human Resources EU+CH+OF", "EDPR-EU+BR")
+
+            df_report_EU = pd.concat([df_report_EU_CH,df_report_EU_IG, df_report_EU_EU_BR]) #df_report_EU_OF, df_report_EU_NA,
 
             df_report_EU['Periculosidade_BR'], df_report_EU['SeguroMed_seguromedico'], df_report_EU['SeguroMed_examenes_medicos'], df_report_EU['SegMedicoOdontologicoBR'], df_report_EU['Seguro_Med_AuxilioBR'], df_report_EU['Canteen_BR'], df_report_EU['Tarjeta_Transporte_BR'], df_report_EU['Gratificacion_de_ferias'], df_report_EU['Seguridad_Social_FGTS'], df_report_EU['Seguridad_Social_Total'], df_report_EU['Horas_extra2'] = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
             
             df_report_EU.dtypes
                   
-            df_report_BR = Download_Adaptive("Human Resources Brazil")
+            df_report_BR = Download_Adaptive("Human Resources Brazil", "EDPR")
             
             df_report_BR['PensionPlan Carga'], df_report_BR['PensionPlan Extra'], df_report_BR['PensionPlan Final'], df_report_BR['Seguro de vida carga'], df_report_BR['Seguro Vida Extra'], df_report_BR['Seguro Vida Final'], df_report_BR['CompanyCar carga'], df_report_BR['CompanyCar Extra'], df_report_BR['CompanyCar Final'], df_report_BR['Parking_all'], df_report_BR['Varios PT Carga'], df_report_BR['Varios PT Extra'], df_report_BR['Varios Final'], df_report_BR['FTE Pension Plan'], df_report_BR['CostCentre_CH'], df_report_BR['Duty Call carga'], df_report_BR['Duty Call Extra'], df_report_BR['Duty Call Final'] = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
             
             df_report_BR.dtypes
             
-            df_report_NA = Download_Adaptive("Human Resources NA")
+            df_report_NA = Download_Adaptive("Human Resources NA", "EDPR")
             
             df_report_NA.rename(columns={'NH Situation' : 'Situacion','Direction' : 'Dirección','Department' : 'Departamento'}, inplace=True)
         
