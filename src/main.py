@@ -181,6 +181,20 @@ def HR_decrypt_JobTitle(EncodedJT, ProvidedKey):
     
     return DecodedInfo
 
+def generate_previous_years_columns(column, current_year):
+    '''Given a column, it returns a list for previous years
+    '''
+    list_col = []
+    for i in range(current_year-1, -1, -1):
+        print(i)
+        if i != 0:
+            append_col = column.replace(f"N+{current_year}", f"N+{i}")
+            list_col.append(append_col)
+        else:
+            append_col = column.replace(f" N+{current_year}", "")
+            list_col.append(append_col)
+    return list_col
+
 if __name__ == "__main__":
     load_dotenv(".env")
     ObKey = HR_getKey()
@@ -314,7 +328,7 @@ if __name__ == "__main__":
                     dict_cols[i] = columns_float
                 else:
                     dict_cols[i] = [col + f" N+{i}" for col in columns_float if col != "Parking_all"]
-            print(dict_cols)
+            
             #convert floats
             for i, list_of_columns in dict_cols.items():
                 for col in list_of_columns:
@@ -327,8 +341,8 @@ if __name__ == "__main__":
                         df_report_EU.loc[:, col] = df_report_EU[col].fillna(0) - df_report_EU[col_py].fillna(0)
                     else:
                         #convert cumulative to single year figures
-                        col_py = col.replace(f"N+{str(i)}", f"N+{str(i - 1)}")
-                        df_report_EU.loc[:, col] = df_report_EU[col].fillna(0) - df_report_EU[col_py].fillna(0)
+                        col_list_py = generate_previous_years_columns(col, i)
+                        df_report_EU.loc[:, col] = df_report_EU[col].fillna(0) - df_report_EU[col_list_py].fillna(0).sum(axis=1)
             
             # without bonus amount
             columns_without_bonus = [
@@ -348,6 +362,9 @@ if __name__ == "__main__":
                 df_report_EU.loc[:, f'Total with Bonus N+{i}'] =  df_report_EU.loc[:, f'Total without Bonus N+{i}'] + df_report_EU[f'Bonus Amount N+{i}'].fillna(0) 
 
 
+            #add columns
+            df_report_EU["Seguridad_Social_Total"] = df_report_EU["Seguridad Social"]
+
             #Brazil 
                   
             df_report_BR = Download_Adaptive("Human Resources Brazil")
@@ -364,12 +381,11 @@ if __name__ == "__main__":
             df_report_BR['Parking_all'], 
             df_report_BR['Varios PT Carga'],
             df_report_BR['Varios PT Extra'],
-            df_report_BR['Varios Final'],
             df_report_BR['FTE Pension Plan'],
             df_report_BR['CostCentre_CH'],
             df_report_BR['Duty Call carga'],
             df_report_BR['Duty Call Extra'],
-            df_report_BR['Duty Call Final']) = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+            df_report_BR['Duty Call Final']) = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
             
             columns_float = [
                 "Salary",
@@ -401,14 +417,12 @@ if __name__ == "__main__":
                     if i == 0:
                         pass
                     elif i == 1:
-                        col_py = col.replace(f" N+{str(i)}", f"")
+                        col_py = col.replace(f" N+{i}", f"")
                         df_report_BR.loc[:, col] = df_report_BR[col].fillna(0) - df_report_BR[col_py].fillna(0)
                     else:
                         #convert cumulative to single year figures
-                        col_py = col.replace(f"N+{i}", f"N+{i - 1}")
-                        print(col)
-                        print(col_py)
-                        df_report_BR.loc[:, col] = df_report_BR[col].fillna(0) - df_report_BR[col_py].fillna(0)
+                        col_list_py = generate_previous_years_columns(col, i)
+                        df_report_BR.loc[:, col] = df_report_BR[col].fillna(0) - df_report_BR[col_list_py].fillna(0).sum(axis=1)
             
             # without bonus amount
             columns_without_bonus = [
@@ -428,12 +442,22 @@ if __name__ == "__main__":
             for i in range(1, 5):
                 df_report_BR.loc[:, f'Total with Bonus N+{i}'] =  df_report_BR.loc[:, f'Total without Bonus N+{i}'] + df_report_BR[f'Bonus Amount N+{i}'].fillna(0) 
 
+            #add columns for other totals
+            df_report_BR["Duty Call Final"] = df_report_BR["Duty Call"]
+            df_report_BR["PensionPlan Final"] = df_report_BR["Pension_Plan"]
+            df_report_BR["Seguro Vida Final"] = df_report_BR["Seguro_Vida"]
+            df_report_BR["CompanyCar Final"] = df_report_BR["CompanyCar"]
+
             
             df_report_NA = Download_Adaptive("Human Resources NA")
             
             df_report_NA.rename(columns={'NH Situation' : 'Situacion','Direction' : 'Dirección','Department' : 'Departamento'}, inplace=True)
         
             df_report = pd.concat([df_report_EU, df_report_BR, df_report_NA])
+
+            #relocate social security column near to "Seguridad Social"
+            index_ = df_report.columns.get_loc("Seguridad Social")
+            df_report.insert(index_+1, column="Seguridad_Social_Total", value=df_report.pop("Seguridad_Social_Total"))
 
             Reports_Decoded_Folder = getenv("Reports_Decoded_Folder")
 
@@ -470,7 +494,7 @@ if __name__ == "__main__":
             df_report = pd.concat([df_report_EU, df_report_BR, df_report_NA])
 
             Reports_Decoded_Folder = getenv("Reports_Decoded_Folder")
-
+            
             df_report.to_excel(join(Reports_Decoded_Folder, "Report_encoded.xlsx"), sheet_name='Report', index=False)
             
             df_report["Employee ID"] = df_report["Employee ID"].map(lambda x: HR_decrypt(x, ObKey))
